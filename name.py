@@ -30,25 +30,40 @@ class Player(GameSprite):
         self.gravity = 1
         self.jump_power = -17
         self.direction = "right"
-        self.active_skin = "hero"
+        self.active_skin = "Harry"
         self.double_jump = False
         self.high_jump = False
         self.fast_move = False
         self.shield = False
         self.multi_bullet = False
-
-
         self.jump_counter = 0
 
-    def update(self, barriers, platforms):
+        self.skin_images = {
+            "Harry": transform.scale(image.load("images/Harry.png"), (size_x, size_y)),
+            "Hermiona": transform.scale(image.load("images/Hermiona.png"), (size_x, size_y)),
+            "Ron": transform.scale(image.load("images/Ron.png"), (size_x, size_y)),
+            "Damboldor": transform.scale(image.load("images/Damboldor.png"), (size_x, size_y)),
+            "Profesor": transform.scale(image.load("images/Profesor.png"), (size_x, size_y))
+        }
 
+        self.image_normal = self.skin_images[self.active_skin]
+        self.image = self.image_normal
+
+    def apply_skin(self, skin_name):
+        if skin_name in self.skin_images:
+            self.active_skin = skin_name
+            self.image_normal = self.skin_images[skin_name]
+            self.image = self.image_normal
+            return True
+        return False
+
+    def update(self, barriers, platforms):
         move_speed = self.x_speed
         if self.fast_move:
             move_speed = self.x_speed * 1.5
 
         if self.rect.x <= win_width - 80 and move_speed > 0 or self.rect.x >= 0 and move_speed < 0:
             self.rect.x += move_speed
-
 
         platforms_touched = sprite.spritecollide(self, barriers, False)
         if move_speed > 0:
@@ -58,22 +73,17 @@ class Player(GameSprite):
             for p in platforms_touched:
                 self.rect.left = max(self.rect.left, p.rect.right)
 
-
         if move_speed > 0:
             self.direction = "right"
         elif move_speed < 0:
             self.direction = "left"
 
-
         if not self.on_ground:
             self.y_speed += self.gravity
 
-
         self.rect.y += self.y_speed
 
-
         self.on_ground = False
-
 
         platforms_touched = sprite.spritecollide(self, platforms, False)
         if self.y_speed > 0:
@@ -87,11 +97,9 @@ class Player(GameSprite):
                 self.rect.top = max(self.rect.top, p.rect.bottom)
                 self.y_speed = 0
 
-
         walls_touched = sprite.spritecollide(self, barriers, False)
         if self.y_speed > 0:
             for wall in walls_touched:
-
                 if wall.rect.width > 30:
                     if abs(self.rect.bottom - wall.rect.top) < 10:
                         self.on_ground = True
@@ -99,30 +107,27 @@ class Player(GameSprite):
                         self.y_speed = 0
                         self.jump_counter = 0
 
-
         if self.rect.top > win_height:
             return True
         return False
 
     def jump(self):
-
         if self.on_ground:
             jump_power = self.jump_power
             if self.high_jump:
                 jump_power = self.jump_power * 1.3
             self.y_speed = jump_power
-            self.jump_counter = 1  # Первый прыжок
-        elif self.double_jump and self.jump_counter == 1:  # Если активирован двойной прыжок и уже был один прыжок
+            self.jump_counter = 1
+        elif self.double_jump and self.jump_counter == 1:
             jump_power = self.jump_power
             if self.high_jump:
-                jump_power = self.jump_power * 2
+                jump_power = self.jump_power * 1.3
             self.y_speed = jump_power
-            self.jump_counter = 2  # Второй прыжок
+            self.jump_counter = 2
 
     def fire(self):
         global bullets
         if self.multi_bullet:
-            # Тройная стрельба
             if self.direction == "right":
                 bullet1 = Bullet('images/bullet.png', self.rect.right, self.rect.centery, 15, 10, 15)
                 bullet2 = Bullet('images/bullet.png', self.rect.right, self.rect.centery - 20, 15, 10, 15)
@@ -131,7 +136,6 @@ class Player(GameSprite):
                 bullet1 = Bullet('images/bullet.png', self.rect.left - 15, self.rect.centery, 15, 10, -15)
                 bullet2 = Bullet('images/bullet.png', self.rect.left - 15, self.rect.centery - 20, 15, 10, -15)
                 bullet3 = Bullet('images/bullet.png', self.rect.left - 15, self.rect.centery + 20, 15, 10, -15)
-            # Добавляем в группу bullets
             bullets.add(bullet1)
             bullets.add(bullet2)
             bullets.add(bullet3)
@@ -141,22 +145,7 @@ class Player(GameSprite):
                 bullet = Bullet('images/bullet.png', self.rect.right, self.rect.centery, 15, 10, 15)
             else:
                 bullet = Bullet('images/bullet.png', self.rect.left - 15, self.rect.centery, 15, 10, -15)
-            # Добавляем в группу bullets
             bullets.add(bullet)
-
-    def apply_skin(self, skin_name):
-        self.active_skin = skin_name
-        # Обновляем изображение персонажа
-        if skin_name == "Harry":
-            self.image_normal = transform.scale(image.load("images/Harry.png"), (90, 100))
-        elif skin_name == "Hermiona":
-            self.image_normal = transform.scale(image.load("images/Hermiona.png"), (90, 100))
-        elif skin_name == "Ron":
-            self.image_normal = transform.scale(image.load("images/Ron.png"), (90, 100))
-        elif skin_name == "Damboldor":
-            self.image_normal = transform.scale(image.load("images/Damboldor.png"), (90, 100))
-        elif skin_name == "Profesor":
-            self.image_normal = transform.scale(image.load("images/Profesor.png"), (90, 100))
 
 
 class Enemy_h(GameSprite):
@@ -222,7 +211,7 @@ class ShopItem:
 
 
 def create_level(level_name):
-    global barriers, platforms, monsters, coins, bullets, boss_bullets, boss
+    global barriers, platforms, monsters, coins, bullets, boss_bullets, boss, active_skin
 
     barriers.empty()
     platforms.empty()
@@ -239,6 +228,8 @@ def create_level(level_name):
     hero = None
     final_sprite = None
     boss = None
+
+    hero_x, hero_y, hero_size_x, hero_size_y = 50, 570, 80, 80
 
     if level_name == "lvl1":
         floor = GameSprite('images/wall2.png', 0, 650, 1200, 50)
@@ -258,7 +249,7 @@ def create_level(level_name):
         monsters.add(Enemy_h('images/enemy.png', 350, 520, 80, 80, 2, 320, 480))
         monsters.add(Enemy_h('images/enemy.png', 750, 470, 80, 80, 2, 720, 880))
 
-        hero = Player('images/Harry.png', 50, 570, 80, 80, 0, 0)
+        hero = Player('images/Harry.png', hero_x, hero_y, hero_size_x, hero_size_y, 0, 0)
         final_sprite = GameSprite('images/door.png', 1050, 550, 100, 100)
 
     elif level_name == "lvl2":
@@ -283,7 +274,7 @@ def create_level(level_name):
         monsters.add(Enemy_h('images/enemy.png', 400, 520, 80, 80, 3, 330, 470))
         monsters.add(Enemy_h('images/enemy.png', 700, 470, 80, 80, 3, 580, 770))
 
-        hero = Player('images/Harry.png', 50, 570, 80, 80, 0, 0)
+        hero = Player('images/Harry.png', hero_x, hero_y, hero_size_x, hero_size_y, 0, 0)
         final_sprite = GameSprite('images/door.png', 1050, 550, 100, 100)
 
     elif level_name == "lvl3":
@@ -294,9 +285,9 @@ def create_level(level_name):
         platforms.add(GameSprite('images/platform.png', 850, 400, 350, 30))
         platforms.add(GameSprite('images/platform.png', 200, 400, 250, 30))
         platforms.add(GameSprite('images/platform.png', 500, 250, 250, 30))
+
         for i in range(6):
             coins.add(GameSprite('images/coin.png', 250 + i * 40, 220, 40, 40))
-
 
         for i in range(2):
             for j in range(2):
@@ -308,7 +299,7 @@ def create_level(level_name):
         monsters.add(Enemy_h('images/enemy.png', 500, 395, 80, 80, 2, 450, 700))
         monsters.add(Enemy_h('images/enemy.png', 900, 370, 80, 80, 2, 850, 1100))
 
-        hero = Player('images/Harry.png', 50, 570, 80, 80, 0, 0)
+        hero = Player('images/Harry.png', hero_x, hero_y, hero_size_x, hero_size_y, 0, 0)
         final_sprite = GameSprite('images/door.png', 1050, 300, 100, 100)
 
     elif level_name == "lvl4":
@@ -339,7 +330,6 @@ def create_level(level_name):
             coins.add(GameSprite('images/coin.png', 390 + i * 40, 340, 40, 40))
             coins.add(GameSprite('images/coin.png', 390 + i * 40, 420, 40, 40))
 
-
         for i in range(2):
             coins.add(GameSprite('images/coin.png', 600 + i * 60, 370, 40, 40))
         for i in range(2):
@@ -347,12 +337,11 @@ def create_level(level_name):
         for i in range(2):
             coins.add(GameSprite('images/coin.png', 1100 + i * 60, 280, 40, 40))
 
-        #
         monsters.add(Enemy_h('images/enemy.png', 400, 470, 80, 80, 3, 350, 500))
         monsters.add(Enemy_h('images/enemy.png', 650, 420, 80, 80, 3, 600, 750))
         monsters.add(Enemy_v('images/enemy.png', 950, 150, 80, 80, 2, 100, 300))
 
-        hero = Player('images/Harry.png', 50, 570, 80, 80, 0, 0)
+        hero = Player('images/Harry.png', hero_x, hero_y, hero_size_x, hero_size_y, 0, 0)
         final_sprite = GameSprite('images/door.png', 1150, 250, 100, 100)
 
     elif level_name == "lvl5":
@@ -371,10 +360,8 @@ def create_level(level_name):
         coins.add(GameSprite('images/coin.png', 640, 150, 40, 40))
         coins.add(GameSprite('images/coin.png', 720, 180, 40, 40))
 
-
         for i in range(5):
             coins.add(GameSprite('images/coin.png', 560 + i * 40, 220, 40, 40))
-
 
         for i in range(2):
             coins.add(GameSprite('images/coin.png', 180 + i * 60, 490, 40, 40))
@@ -389,14 +376,32 @@ def create_level(level_name):
         coins.add(GameSprite('images/coin.png', 650, 270, 40, 40))
         coins.add(GameSprite('images/coin.png', 950, 320, 40, 40))
 
-        monsters.add(Enemy_h('images/enemy.png', 250, 490, 80, 80, 2, 150, 350))  # Скорость 2 - медленнее
-        monsters.add(Enemy_h('images/enemy.png', 850, 490, 80, 80, 2, 750, 950))  # Скорость 2 - медленнее
+        monsters.add(Enemy_h('images/enemy.png', 250, 490, 80, 80, 2, 150, 350))
+        monsters.add(Enemy_h('images/enemy.png', 850, 490, 80, 80, 2, 750, 950))
 
-        hero = Player('images/Harry.png', 50, 570, 80, 80, 0, 0)
-        final_sprite = GameSprite('images/door.png', 640, 570, 100, 100)  # Размещаем по центру
+        hero = Player('images/Harry.png', hero_x, hero_y, hero_size_x, hero_size_y, 0, 0)
+        final_sprite = GameSprite('images/door.png', 640, 570, 100, 100)
+
+    if hero:
+        for skin in shop_skins:
+            if skin.active:
+                hero.apply_skin(skin.name)
+                break
+
+        for boost in shop_boosts:
+            if boost.active and boost.unlocked:
+                if boost.name == "Double Jump":
+                    hero.double_jump = True
+                elif boost.name == "High Jump":
+                    hero.high_jump = True
+                elif boost.name == "Speed Boost":
+                    hero.fast_move = True
+                elif boost.name == "Shield":
+                    hero.shield = True
+                elif boost.name == "Triple Shot":
+                    hero.multi_bullet = True
 
     return hero, final_sprite
-
 
 def show_level_progress(level_name, collected_coins, total_coins):
     level_font = font.SysFont('Arial', 30)
@@ -488,21 +493,30 @@ def handle_shop_clicks(mouse_pos, active_tab):
             if item.unlocked:
                 button_rect = Rect(win_width - 200, y_offset + 50, 120, 30)
                 if button_rect.collidepoint(mouse_pos):
-                    if item.active:
-                        item.active = False
-                        if active_tab == "boosts":
+                    if active_tab == "boosts":
+                        if item.active:
+                            item.active = False
                             deactivate_boost(item.name)
-                    else:
-                        if active_tab == "skins":
-                            for skin in shop_skins:
-                                skin.active = False
-                            active_skin = item.name
-                            if hero:
-                                hero.apply_skin(item.name)
-                        elif active_tab == "boosts":
+                        else:
+                            if item.name in ["Double Jump", "High Jump"]:
+                                for boost in shop_boosts:
+                                    if boost.name in ["Double Jump", "High Jump"] and boost != item:
+                                        boost.active = False
+                                        deactivate_boost(boost.name)
+                                        
+                            item.active = True
                             activate_boost(item.name)
 
-                        item.active = True
+                    elif active_tab == "skins":
+                        if not item.active:
+
+                            for skin in shop_skins:
+                                skin.active = False
+                            item.active = True
+                            active_skin = item.name
+
+                            if hero:
+                                hero.apply_skin(item.name)
             else:
                 buy_button_rect = Rect(win_width - 200, y_offset + 50, 80, 30)
                 if buy_button_rect.collidepoint(mouse_pos) and player_coins >= item.price:
@@ -511,7 +525,8 @@ def handle_shop_clicks(mouse_pos, active_tab):
 
                     if active_tab == "skins":
                         for skin in shop_skins:
-                            skin.active = False
+                            if skin != item:
+                                skin.active = False
                         item.active = True
                         active_skin = item.name
                         if hero:
@@ -523,13 +538,24 @@ def handle_shop_clicks(mouse_pos, active_tab):
 
 
 def activate_boost(boost_name):
+    global hero
     if not hero:
         return
 
     if boost_name == "Double Jump":
         hero.double_jump = True
+        if hero.high_jump:
+            hero.high_jump = False
+            for boost in shop_boosts:
+                if boost.name == "High Jump":
+                    boost.active = False
     elif boost_name == "High Jump":
         hero.high_jump = True
+        if hero.double_jump:
+            hero.double_jump = False
+            for boost in shop_boosts:
+                if boost.name == "Double Jump":
+                    boost.active = False
     elif boost_name == "Speed Boost":
         hero.fast_move = True
     elif boost_name == "Shield":
@@ -539,6 +565,7 @@ def activate_boost(boost_name):
 
 
 def deactivate_boost(boost_name):
+    global hero
     if not hero:
         return
 
@@ -674,9 +701,9 @@ window = display.set_mode((win_width, win_height))
 display.set_caption("Platformer")
 
 background = transform.scale(image.load('images/menu.png'), (win_width, win_height))
-menu_background = transform.scale(image.load('images/backgraund.png'), (win_width, win_height))
+menu_background = transform.scale(image.load('images/bg.png'), (win_width, win_height))
 shop_background = transform.scale(image.load('images/shop_bg.png'), (win_width, win_height))
-level_complete_background = transform.scale(image.load('images/display.png'), (win_width, win_height))
+level_complete_background = transform.scale(image.load('images/menu.png'), (win_width, win_height))
 game_over_background = transform.scale(image.load('images/game_over.png'), (win_width, win_height))
 
 start_button = GameSprite('images/start_hover.png', 700, 405, 250, 100)
@@ -742,7 +769,7 @@ lose_sound = mixer.Sound('sounds/over.wav')
 
 
 mixer.music.load('sounds/main.wav')
-mixer.music.play(-1)  # -1 для непрерывного повторения
+mixer.music.play(-1)  
 
 
 game_state = "menu"
@@ -750,30 +777,36 @@ shop_tab = "boosts"
 run = True
 clock = time.Clock()
 
+jump_key_pressed = False
+
+
 while run:
     for e in event.get():
         if e.type == QUIT:
             run = False
 
+
         elif e.type == KEYDOWN:
             if game_state == "game":
-
                 if e.key == K_a or e.key == K_LEFT:
                     hero.x_speed = -8
                 elif e.key == K_d or e.key == K_RIGHT:
                     hero.x_speed = 8
-                elif e.key == K_w or e.key == K_UP or e.key == K_SPACE:
+                elif (e.key == K_w or e.key == K_UP or e.key == K_SPACE) and not jump_key_pressed:
+                    jump_key_pressed = True
                     hero.jump()
                     jump_sound.play()
                 elif e.key == K_LCTRL:
                     hero.fire()
                     shoot_sound.play()
 
+
         elif e.type == KEYUP:
             if game_state == "game":
-
                 if e.key == K_a or e.key == K_LEFT or e.key == K_d or e.key == K_RIGHT:
                     hero.x_speed = 0
+                elif e.key == K_w or e.key == K_UP or e.key == K_SPACE:
+                    jump_key_pressed = False
 
         elif e.type == MOUSEBUTTONDOWN:
             if e.button == 1:
@@ -843,16 +876,16 @@ while run:
             player_coins += 1
             coin_sound.play()
 
-
         monster_hit = sprite.spritecollide(hero, monsters, False)
         if monster_hit:
             if hero.shield:
                 hero.shield = False
+
                 for boost in shop_boosts:
                     if boost.name == "Shield":
                         boost.active = False
 
-                monster_hit[0].kill()
+                monster_hit[0].kill()  
                 hit_sound.play()
             else:
                 game_state = "game_over"
