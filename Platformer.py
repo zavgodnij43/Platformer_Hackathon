@@ -30,13 +30,15 @@ class Player(GameSprite):
         self.gravity = 1
         self.jump_power = -17
         self.direction = "right"
-        self.active_skin = "Harry"
+        self.active_skin = "Harry"  # Имя активного скина по умолчанию
         self.double_jump = False
         self.high_jump = False
         self.fast_move = False
         self.shield = False
         self.multi_bullet = False
         self.jump_counter = 0
+        self.health = 3
+
 
         self.skin_images = {
             "Harry": transform.scale(image.load("images/Harry.png"), (size_x, size_y)),
@@ -46,10 +48,12 @@ class Player(GameSprite):
             "Profesor": transform.scale(image.load("images/Profesor.png"), (size_x, size_y))
         }
 
+
         self.image_normal = self.skin_images[self.active_skin]
         self.image = self.image_normal
 
     def apply_skin(self, skin_name):
+        # Проверяем, есть ли такой скин
         if skin_name in self.skin_images:
             self.active_skin = skin_name
             self.image_normal = self.skin_images[skin_name]
@@ -58,6 +62,7 @@ class Player(GameSprite):
         return False
 
     def update(self, barriers, platforms):
+        # Остальной код метода update остается без изменений
         move_speed = self.x_speed
         if self.fast_move:
             move_speed = self.x_speed * 1.5
@@ -112,22 +117,27 @@ class Player(GameSprite):
         return False
 
     def jump(self):
+        # Return True if jump was successful, False otherwise
         if self.on_ground:
             jump_power = self.jump_power
             if self.high_jump:
                 jump_power = self.jump_power * 1.3
             self.y_speed = jump_power
             self.jump_counter = 1
+            return True
         elif self.double_jump and self.jump_counter == 1:
             jump_power = self.jump_power
             if self.high_jump:
                 jump_power = self.jump_power * 1.3
             self.y_speed = jump_power
             self.jump_counter = 2
+            return True
+        return False
 
     def fire(self):
         global bullets
         if self.multi_bullet:
+            # Тройная стрельба
             if self.direction == "right":
                 bullet1 = Bullet('images/bullet.png', self.rect.right, self.rect.centery, 15, 10, 15)
                 bullet2 = Bullet('images/bullet.png', self.rect.right, self.rect.centery - 20, 15, 10, 15)
@@ -229,6 +239,7 @@ def create_level(level_name):
     final_sprite = None
     boss = None
 
+    # Определяем начальные координаты и размеры для героя
     hero_x, hero_y, hero_size_x, hero_size_y = 50, 570, 80, 80
 
     if level_name == "lvl1":
@@ -278,6 +289,7 @@ def create_level(level_name):
         final_sprite = GameSprite('images/door.png', 1050, 550, 100, 100)
 
     elif level_name == "lvl3":
+        # и так далее для остальных уровней...
         floor = GameSprite('images/wall2.png', 0, 650, 500, 50)
         platforms.add(floor)
 
@@ -382,12 +394,15 @@ def create_level(level_name):
         hero = Player('images/Harry.png', hero_x, hero_y, hero_size_x, hero_size_y, 0, 0)
         final_sprite = GameSprite('images/door.png', 640, 570, 100, 100)
 
+    # После создания героя применяем активный скин
     if hero:
+        # Находим активный скин в магазине
         for skin in shop_skins:
             if skin.active:
                 hero.apply_skin(skin.name)
                 break
 
+        # Применяем активные бусты
         for boost in shop_boosts:
             if boost.active and boost.unlocked:
                 if boost.name == "Double Jump":
@@ -403,6 +418,7 @@ def create_level(level_name):
 
     return hero, final_sprite
 
+
 def show_level_progress(level_name, collected_coins, total_coins):
     level_font = font.SysFont('Arial', 30)
     level_text = level_font.render(f"Level: {level_name.replace('lvl', '')}", True, (255, 255, 255))
@@ -411,6 +427,12 @@ def show_level_progress(level_name, collected_coins, total_coins):
     coin_font = font.SysFont('Arial', 30)
     coin_text = coin_font.render(f"Coins: {collected_coins}/{total_coins}", True, (255, 215, 0))
     window.blit(coin_text, (20, 60))
+
+    # Add health display
+    if hero and hasattr(hero, 'health'):
+        health_font = font.SysFont('Arial', 30)
+        health_text = health_font.render(f"Health: {hero.health}", True, (255, 0, 0))
+        window.blit(health_text, (20, 100))
 
 
 def show_shop_interface(active_tab="boosts"):
@@ -490,45 +512,61 @@ def handle_shop_clicks(mouse_pos, active_tab):
         item_rect = Rect(50, y_offset, win_width - 100, 100)
 
         if item_rect.collidepoint(mouse_pos):
+            # Область кнопки "Activate/Deactivate" или "Buy"
             if item.unlocked:
                 button_rect = Rect(win_width - 200, y_offset + 50, 120, 30)
                 if button_rect.collidepoint(mouse_pos):
                     if active_tab == "boosts":
+                        # Для бустов: переключение активного статуса
                         if item.active:
                             item.active = False
                             deactivate_boost(item.name)
                         else:
+                            # Некоторые бусты могут быть несовместимы, поэтому деактивируем конфликтующие
                             if item.name in ["Double Jump", "High Jump"]:
                                 for boost in shop_boosts:
                                     if boost.name in ["Double Jump", "High Jump"] and boost != item:
                                         boost.active = False
                                         deactivate_boost(boost.name)
-                                        
+
+                            # Активируем выбранный буст
                             item.active = True
                             activate_boost(item.name)
 
                     elif active_tab == "skins":
+                        # Для скинов: можно активировать только один скин за раз
                         if not item.active:
-
+                            # Деактивируем все скины
                             for skin in shop_skins:
                                 skin.active = False
+
+                            # Активируем выбранный скин
                             item.active = True
                             active_skin = item.name
 
+                            # Применяем скин к герою если он существует
                             if hero:
                                 hero.apply_skin(item.name)
             else:
+                # Область кнопки "Buy"
                 buy_button_rect = Rect(win_width - 200, y_offset + 50, 80, 30)
                 if buy_button_rect.collidepoint(mouse_pos) and player_coins >= item.price:
+                    # Покупка предмета
                     player_coins -= item.price
                     item.unlocked = True
 
+                    # Если это скин, активируем его сразу после покупки
                     if active_tab == "skins":
+                        # Деактивируем другие скины
                         for skin in shop_skins:
                             if skin != item:
                                 skin.active = False
+
+                        # Активируем купленный скин
                         item.active = True
                         active_skin = item.name
+
+                        # Применяем скин к герою если он существует
                         if hero:
                             hero.apply_skin(item.name)
 
@@ -542,8 +580,10 @@ def activate_boost(boost_name):
     if not hero:
         return
 
+    # Активируем нужный буст у героя
     if boost_name == "Double Jump":
         hero.double_jump = True
+        # Деактивируем несовместимые бусты
         if hero.high_jump:
             hero.high_jump = False
             for boost in shop_boosts:
@@ -551,6 +591,7 @@ def activate_boost(boost_name):
                     boost.active = False
     elif boost_name == "High Jump":
         hero.high_jump = True
+        # Деактивируем несовместимые бусты
         if hero.double_jump:
             hero.double_jump = False
             for boost in shop_boosts:
@@ -569,6 +610,7 @@ def deactivate_boost(boost_name):
     if not hero:
         return
 
+    # Деактивируем буст у героя
     if boost_name == "Double Jump":
         hero.double_jump = False
     elif boost_name == "High Jump":
@@ -769,7 +811,7 @@ lose_sound = mixer.Sound('sounds/over.wav')
 
 
 mixer.music.load('sounds/main.wav')
-mixer.music.play(-1)  
+mixer.music.play(-1)  # -1 для непрерывного повторения
 
 
 game_state = "menu"
@@ -794,8 +836,8 @@ while run:
                     hero.x_speed = 8
                 elif (e.key == K_w or e.key == K_UP or e.key == K_SPACE) and not jump_key_pressed:
                     jump_key_pressed = True
-                    hero.jump()
-                    jump_sound.play()
+                    if hero.jump():  # Only play sound if jump was successful
+                        jump_sound.play()
                 elif e.key == K_LCTRL:
                     hero.fire()
                     shoot_sound.play()
@@ -879,17 +921,34 @@ while run:
         monster_hit = sprite.spritecollide(hero, monsters, False)
         if monster_hit:
             if hero.shield:
+                # If shield active, remove monster and deactivate shield
                 hero.shield = False
 
+                # Update state in shop
                 for boost in shop_boosts:
                     if boost.name == "Shield":
                         boost.active = False
 
-                monster_hit[0].kill()  
+                monster_hit[0].kill()  # Remove the monster we collided with
                 hit_sound.play()
             else:
-                game_state = "game_over"
-                lose_sound.play()
+                # If no shield, reduce health
+                hero.health -= 1
+                hit_sound.play()
+
+                # Push the player away from monster (optional knockback effect)
+                if hero.rect.centerx < monster_hit[0].rect.centerx:
+                    hero.rect.x -= 50
+                else:
+                    hero.rect.x += 50
+
+                # Remove monster to prevent multiple hits at once
+                monster_hit[0].kill()
+
+                # Check if player is out of health
+                if hero.health <= 0:
+                    game_state = "game_over"
+                    lose_sound.play()
 
         if sprite.collide_rect(hero, final_sprite):
             game_state = "level_completed"
